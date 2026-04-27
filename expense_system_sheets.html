@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>経費精算</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;background:#f5f5f3;color:#1a1a1a;overflow-x:hidden}
+:root{
+  --bg:#fff;--bg2:#f5f5f3;--bg3:#eeece8;
+  --text:#1a1a1a;--text2:#6b6b6b;
+  --border:#e0ddd8;--border2:#ccc9c2;
+  --purple:#534AB7;--purple-d:#3C3489;--purple-l:#EEEDFE;--purple-t:#3C3489;
+  --teal:#0F6E56;--teal-l:#E1F5EE;--teal-t:#085041;
+  --amber:#854F0B;--amber-l:#FAEEDA;--amber-t:#633806;
+  --red:#A32D2D;--red-l:#FCEBEB;--red-t:#501313;
+  --green-l:#EAF3DE;--green-t:#27500A;
+  --blue-l:#E6F1FB;--blue-t:#0C447C;
+  --gray-l:#F1EFE8;--gray-t:#444441;
+  --r:10px;--rl:14px;
+  --nav-h:60px;--top-h:54px;
+}
+
+/* ══════════════════════════════════
+   ローディング・ログイン
+══════════════════════════════════ */
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;gap:.75rem}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loading-msg{font-size:13px;color:var(--text2)}
+
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;min-height:100dvh;background:var(--bg2);padding:1rem}
+.login-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);padding:1.75rem;width:100%;max-width:360px}
+.login-title{font-size:22px;font-weight:700;margin-bottom:.25rem}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:1.5rem}
+.setup-banner{background:var(--blue-l);border:1px solid #85B7EB;border-radius:var(--r);padding:.875rem;margin-bottom:1.25rem;font-size:13px;color:var(--blue-t);line-height:1.7}
+.fg{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+label{font-size:12px;color:var(--text2);font-weight:500}
+input,select,textarea{font-family:inherit;font-size:16px;color:var(--text);background:var(--bg);border:1.5px solid var(--border2);border-radius:var(--r);padding:10px 12px;width:100%;transition:border-color .15s;appearance:none;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--purple)}
+textarea{resize:vertical;min-height:72px;font-size:14px}
+.err-msg{font-size:12px;color:var(--red);min-height:16px;margin-bottom:4px}
+
+/* ══════════════════════════════════
+   ボタン
+══════════════════════════════════ */
+.btn{font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;border-radius:var(--r);padding:10px 18px;border:1.5px solid var(--border2);background:var(--bg);color:var(--text);transition:opacity .1s;-webkit-appearance:none;appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:active{opacity:.7}
+.btn.primary{background:var(--purple);color:#fff;border-color:var(--purple)}
+.btn.warn{background:var(--amber-l);color:var(--amber-t);border-color:#EF9F27}
+.btn.danger{background:var(--red-l);color:var(--red-t);border-color:#E24B4A}
+.btn.ocr{background:var(--teal-l);color:var(--teal-t);border-color:#5DCAA5}
+.btn.sm{padding:6px 12px;font-size:12px}
+.btn.full{width:100%}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ══════════════════════════════════
+   メインレイアウト（PC）
+══════════════════════════════════ */
+.app{display:flex;min-height:100vh}
+
+/* サイドバー（PC） */
+.sidebar{width:210px;background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:10}
+.logo{padding:1.25rem;border-bottom:1px solid var(--border)}
+.logo-t{font-size:15px;font-weight:700}
+.logo-s{font-size:11px;color:var(--text2);margin-top:2px}
+.nav{padding:.5rem 0;flex:1;overflow-y:auto}
+.ni{padding:10px 1.25rem;cursor:pointer;color:var(--text2);border-left:2px solid transparent;font-size:13px;display:flex;align-items:center;gap:7px;transition:background .1s;user-select:none}
+.ni:hover{background:var(--bg2)}
+.ni.active{color:var(--text);background:var(--bg2);font-weight:600;border-left-color:var(--purple)}
+.badge-dot{min-width:18px;height:18px;background:#E24B4A;border-radius:9px;font-size:10px;color:#fff;display:flex;align-items:center;justify-content:center;margin-left:auto;padding:0 4px;flex-shrink:0}
+.nav-sep{border-top:1px solid var(--border);margin:.375rem 0}
+.nav-foot{padding:.875rem 1.25rem;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.av{width:30px;height:30px;border-radius:50%;background:var(--purple-l);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--purple-t);flex-shrink:0}
+.av-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.av-role{font-size:10px;color:var(--text2)}
+.logout-btn{margin-left:auto;font-size:11px;cursor:pointer;color:var(--text2);background:none;border:none;padding:4px;flex-shrink:0}
+
+/* メインエリア（PC） */
+.main{flex:1;margin-left:210px;padding:1.75rem;min-height:100vh}
+
+/* ══════════════════════════════════
+   スマホ上部ヘッダー
+══════════════════════════════════ */
+.mobile-header{display:none;position:fixed;top:0;left:0;right:0;height:var(--top-h);background:var(--bg);border-bottom:1px solid var(--border);z-index:20;align-items:center;padding:0 1rem;gap:.75rem}
+.mh-title{font-size:15px;font-weight:700;flex:1}
+.mh-av{width:32px;height:32px;border-radius:50%;background:var(--purple-l);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--purple-t);flex-shrink:0;cursor:pointer}
+
+/* スマホ下部ナビ */
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:var(--bg);border-top:1px solid var(--border);z-index:20;align-items:stretch}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--text2);font-size:10px;font-weight:500;padding:4px 0;position:relative;-webkit-tap-highlight-color:transparent;user-select:none}
+.bn-item.active{color:var(--purple)}
+.bn-item svg{width:22px;height:22px;stroke-width:1.8}
+.bn-badge{position:absolute;top:6px;right:calc(50% - 18px);min-width:16px;height:16px;background:#E24B4A;border-radius:8px;font-size:9px;color:#fff;display:flex;align-items:center;justify-content:center;padding:0 3px}
+
+/* スマホ「もっと見る」メニュー */
+.more-menu{position:fixed;bottom:var(--nav-h);left:0;right:0;background:var(--bg);border-top:1px solid var(--border);z-index:19;padding:.5rem 0;display:none}
+.more-menu.open{display:block}
+.mm-item{padding:13px 1.5rem;font-size:14px;color:var(--text);display:flex;align-items:center;gap:.75rem;cursor:pointer;border-bottom:0.5px solid var(--border)}
+.mm-item:last-child{border:none}
+.mm-item:active{background:var(--bg2)}
+.mm-overlay{position:fixed;inset:0;z-index:18;display:none}
+.mm-overlay.open{display:block}
+
+/* ══════════════════════════════════
+   ページ共通
+══════════════════════════════════ */
+.page{display:none}.page.active{display:block}
+.pt{font-size:18px;font-weight:700;margin-bottom:1.25rem}
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--rl);padding:1.25rem;margin-bottom:.875rem}
+.section-lbl{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:.625rem;text-transform:uppercase;letter-spacing:.05em}
+
+/* メトリクス */
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:.875rem}
+.metric{background:var(--bg2);border-radius:var(--r);padding:.875rem}
+.ml{font-size:11px;color:var(--text2);margin-bottom:4px}
+.mv{font-size:20px;font-weight:700}
+
+/* バッジ */
+.badge{display:inline-block;font-size:11px;padding:3px 8px;border-radius:20px;font-weight:600;white-space:nowrap}
+.badge.pending{background:var(--amber-l);color:var(--amber-t)}
+.badge.approved{background:var(--green-l);color:var(--green-t)}
+.badge.rejected{background:var(--red-l);color:var(--red-t)}
+.badge.locked{background:var(--gray-l);color:var(--gray-t)}
+.badge.admin{background:var(--purple-l);color:var(--purple-t)}
+.badge.member{background:var(--teal-l);color:var(--teal-t)}
+
+/* 通知 */
+.notif{display:flex;align-items:flex-start;gap:10px;padding:.75rem 1rem;border-radius:var(--r);margin-bottom:8px;font-size:13px;line-height:1.5}
+.notif.info{background:var(--blue-l);color:var(--blue-t)}
+.notif.warn{background:var(--amber-l);color:var(--amber-t)}
+.notif.danger{background:var(--red-l);color:var(--red-t)}
+.notif.success{background:var(--green-l);color:var(--green-t)}
+.notif-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.notif.info .notif-dot{background:#185FA5}.notif.warn .notif-dot{background:#BA7517}
+.notif.danger .notif-dot{background:#E24B4A}.notif.success .notif-dot{background:#3B6D11}
+
+/* タブ */
+.tab-bar{display:flex;border-bottom:1px solid var(--border);margin-bottom:.875rem;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tab{font-size:13px;padding:8px 14px;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;flex-shrink:0}
+.tab.active{color:var(--purple);border-bottom-color:var(--purple);font-weight:600}
+
+/* チャート */
+.chart-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px}
+.cb-bg{flex:1;height:14px;background:var(--bg2);border-radius:4px;overflow:hidden}
+.cb{height:100%;border-radius:4px}
+
+/* テンプレート */
+.tpl-card{border:1px solid var(--border);border-radius:var(--r);padding:.75rem 1rem;display:flex;align-items:center;gap:10px;cursor:pointer;margin-bottom:8px;background:var(--bg);transition:background .1s}
+.tpl-card:active{background:var(--bg2)}
+.tpl-icon{width:36px;height:36px;border-radius:8px;background:var(--purple-l);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--purple-t);font-weight:700;flex-shrink:0}
+
+/* コメント */
+.comment-thread{background:var(--bg2);border-radius:var(--r);padding:.875rem;margin-top:.5rem}
+.comment-msg{font-size:13px;padding:.625rem .875rem;border-radius:var(--r);margin-bottom:8px;max-width:85%;line-height:1.5}
+.comment-msg.admin-msg{background:var(--amber-l);color:#412402;margin-left:auto}
+.comment-msg.user-msg{background:var(--bg);border:1px solid var(--border);color:var(--text)}
+.comment-meta{font-size:11px;color:var(--text2);margin-bottom:3px}
+
+/* アップロード */
+.upload-area{border:2px dashed var(--border2);border-radius:var(--r);padding:1.5rem 1rem;text-align:center;cursor:pointer;color:var(--text2);font-size:14px;line-height:1.6;transition:background .1s}
+.upload-area:active{background:var(--bg2)}
+.file-item{display:flex;align-items:center;gap:8px;font-size:13px;padding:8px 10px;background:var(--bg2);border-radius:var(--r);margin-top:6px}
+.fi-icon{width:28px;height:28px;background:var(--purple-l);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--purple-t);font-weight:700;flex-shrink:0}
+
+/* ロック */
+.locked-banner{background:var(--gray-l);border:1px solid var(--border2);border-radius:var(--r);padding:.625rem 1rem;font-size:13px;color:var(--gray-t);display:flex;align-items:center;gap:6px;margin-bottom:.875rem}
+
+/* カード内リスト（スマホ用申請リスト） */
+.exp-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:.875rem 1rem;margin-bottom:8px;cursor:pointer;transition:background .1s}
+.exp-card:active{background:var(--bg2)}
+.exp-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.exp-card-memo{font-size:14px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;margin-right:8px}
+.exp-card-amount{font-size:15px;font-weight:700;flex-shrink:0}
+.exp-card-bottom{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);margin-top:4px}
+.exp-card-actions{display:flex;gap:6px;margin-top:8px}
+
+/* グリッド */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.flex-end{display:flex;justify-content:flex-end;gap:8px;margin-top:.875rem}
+
+/* モーダル */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:center;z-index:100;padding:0}
+.modal{background:var(--bg);border-radius:var(--rl) var(--rl) 0 0;padding:1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom));width:100%;max-height:85vh;overflow-y:auto}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:1rem}
+.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto .875rem}
+
+/* トースト */
+.toast-area{position:fixed;top:calc(var(--top-h) + 8px);left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:300;pointer-events:none;width:calc(100% - 2rem);max-width:360px}
+.toast{background:#1a1a1a;color:#fff;font-size:13px;padding:10px 16px;border-radius:var(--r);opacity:0;transition:opacity .3s;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.toast.show{opacity:1}
+
+/* ══════════════════════════════════
+   PC用テーブル（デスクトップのみ表示）
+══════════════════════════════════ */
+.pc-table-wrap{display:block}
+.mobile-list-wrap{display:none}
+.table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+.table th{font-size:11px;font-weight:500;color:var(--text2);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
+.table td{padding:10px 10px;border-bottom:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
+
+/* ══════════════════════════════════
+   スマホ対応（768px以下）
+══════════════════════════════════ */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .mobile-header{display:flex}
+  .bottom-nav{display:flex}
+  .main{margin-left:0;padding:calc(var(--top-h) + .875rem) 1rem calc(var(--nav-h) + 1rem)}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .mv{font-size:18px}
+  .two-col{grid-template-columns:1fr}
+  .pc-table-wrap{display:none}
+  .mobile-list-wrap{display:block}
+  .toast-area{top:calc(var(--top-h) + 8px)}
+  .modal-overlay{align-items:flex-end}
+  .modal{border-radius:var(--rl) var(--rl) 0 0;padding-bottom:calc(1.5rem + env(safe-area-inset-bottom))}
+  /* レポートの2カラムを1カラムに */
+  .report-charts{grid-template-columns:1fr !important}
+}
+@media(min-width:769px){
+  .metrics{grid-template-columns:repeat(4,1fr)}
+  .modal-overlay{align-items:center;padding:1rem}
+  .modal{border-radius:var(--rl);max-width:440px;max-height:90vh}
+  .modal-handle{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- ローディング -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <div id="loading-msg">接続中...</div>
+</div>
+
+<!-- ログイン -->
+<div id="login-screen" class="login-wrap" style="display:none">
+  <div class="login-card">
+    <div class="login-title">経費精算</div>
+    <div class="login-sub">サインインしてください</div>
+    <div class="setup-banner" id="setup-section">
+      <div style="font-weight:600;margin-bottom:4px">⚙ バックエンドURLを設定</div>
+      Google Apps ScriptのデプロイURLを入力してください（一度設定すると保存されます）
+      <input type="text" id="backend-url-input" placeholder="https://script.google.com/macros/s/.../exec" style="margin-top:8px;font-size:13px">
+      <div style="display:flex;justify-content:flex-end;margin-top:8px">
+        <button class="btn primary sm" onclick="saveBackendUrl()">保存して初期化</button>
+      </div>
+    </div>
+    <div class="fg"><label>メールアドレス</label><input type="email" id="l-email" placeholder="メールアドレス" autocomplete="email"></div>
+    <div class="fg"><label>パスワード</label><input type="password" id="l-pass" placeholder="パスワード" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div class="err-msg" id="l-err"></div>
+    <button class="btn primary full" onclick="doLogin()" id="login-btn">サインイン</button>
+  </div>
+</div>
+
+<!-- メインアプリ -->
+<div id="main-app" class="app" style="display:none">
+
+  <!-- PC：サイドバー -->
+  <div class="sidebar">
+    <div class="logo"><div class="logo-t">経費精算</div><div class="logo-s">Expense Manager</div></div>
+    <div class="nav">
+      <div class="ni active" id="nav-dashboard" onclick="go('dashboard',this)">ダッシュボード</div>
+      <div class="ni" id="nav-apply" onclick="go('apply',this)">申請・入力</div>
+      <div class="ni" id="nav-list" onclick="go('list',this)">申請一覧 <span class="badge-dot" id="pending-dot" style="display:none">0</span></div>
+      <div class="ni" id="nav-report" onclick="go('report',this)">レポート・集計</div>
+      <div class="ni" id="nav-notif" onclick="go('notif',this)">通知 <span class="badge-dot" id="notif-dot" style="display:none">0</span></div>
+      <div class="nav-sep"></div>
+      <div class="ni" id="nav-tpl" onclick="go('tpl',this)">テンプレート</div>
+      <div class="ni" id="nav-admin" onclick="go('admin',this)" style="display:none">ユーザー管理</div>
+      <div class="ni" id="nav-close" onclick="go('close',this)" style="display:none">月次締め</div>
+    </div>
+    <div class="nav-foot">
+      <div class="av" id="nav-av">--</div>
+      <div style="overflow:hidden;flex:1"><div class="av-name" id="nav-name">--</div><div class="av-role" id="nav-role">--</div></div>
+      <button class="logout-btn" onclick="doLogout()">退出</button>
+    </div>
+  </div>
+
+  <!-- スマホ：上部ヘッダー -->
+  <div class="mobile-header">
+    <div class="mh-title" id="mh-title">ダッシュボード</div>
+    <div class="mh-av" id="mh-av" onclick="doLogout()">--</div>
+  </div>
+
+  <!-- スマホ：下部ナビ -->
+  <div class="bottom-nav">
+    <div class="bn-item active" id="bn-dashboard" onclick="go('dashboard',null,'ダッシュボード')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      ホーム
+    </div>
+    <div class="bn-item" id="bn-apply" onclick="go('apply',null,'申請・入力')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+      申請
+    </div>
+    <div class="bn-item" id="bn-list" onclick="go('list',null,'申請一覧')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+      一覧
+      <span class="bn-badge" id="bn-pending-dot" style="display:none">0</span>
+    </div>
+    <div class="bn-item" id="bn-report" onclick="go('report',null,'レポート')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      レポート
+    </div>
+    <div class="bn-item" id="bn-more" onclick="toggleMoreMenu()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="5" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>
+      その他
+      <span class="bn-badge" id="bn-notif-dot" style="display:none">0</span>
+    </div>
+  </div>
+
+  <!-- スマホ：もっと見るメニュー -->
+  <div class="mm-overlay" id="mm-overlay" onclick="closeMoreMenu()"></div>
+  <div class="more-menu" id="more-menu">
+    <div class="mm-item" onclick="go('notif',null,'通知');closeMoreMenu()">🔔 通知 <span id="mm-notif-cnt" style="margin-left:auto;font-size:12px;color:var(--red)"></span></div>
+    <div class="mm-item" onclick="go('tpl',null,'テンプレート');closeMoreMenu()">📋 テンプレート</div>
+    <div class="mm-item" id="mm-admin" onclick="go('admin',null,'ユーザー管理');closeMoreMenu()" style="display:none">👥 ユーザー管理</div>
+    <div class="mm-item" id="mm-close" onclick="go('close',null,'月次締め');closeMoreMenu()" style="display:none">🔒 月次締め</div>
+    <div class="mm-item" onclick="doLogout();closeMoreMenu()" style="color:var(--red)">退出</div>
+  </div>
+
+  <!-- メインコンテンツ -->
+  <div class="main">
+
+    <!-- ダッシュボード -->
+    <div id="page-dashboard" class="page active">
+      <div class="pt" style="display:none">ダッシュボード</div>
+      <div id="db-notifs" style="margin-bottom:.875rem"></div>
+      <div class="metrics" id="db-metrics"></div>
+      <div class="card"><div class="section-lbl">今月の申請状況</div><div id="db-list"></div></div>
+    </div>
+
+    <!-- 申請・入力 -->
+    <div id="page-apply" class="page">
+      <div class="pt" style="display:none">申請・入力</div>
+      <div id="apply-locked-msg"></div>
+      <div class="card" style="margin-bottom:.875rem">
+        <div class="section-lbl">テンプレートから入力</div>
+        <div id="tpl-quick"></div>
+      </div>
+      <div class="card">
+        <div class="two-col">
+          <div class="fg" style="margin-bottom:0"><label>申請日</label><input type="date" id="req-date"></div>
+          <div class="fg" style="margin-bottom:0"><label>支払日</label><input type="date" id="pay-date"></div>
+        </div>
+        <div style="height:10px"></div>
+        <div class="two-col">
+          <div class="fg" style="margin-bottom:0"><label>カテゴリ</label>
+            <select id="category">
+              <option value="">選択</option>
+              <option>交通費</option><option>宿泊費</option><option>飲食費</option>
+              <option>消耗品</option><option>通信費</option><option>その他</option>
+            </select>
+          </div>
+          <div class="fg" style="margin-bottom:0"><label>金額（円）</label><input type="number" id="amount" placeholder="0" inputmode="numeric"></div>
+        </div>
+        <div style="height:10px"></div>
+        <div class="fg"><label>用途・摘要</label><textarea id="memo" placeholder="例：○○駅〜△△駅 往復"></textarea></div>
+        <div class="fg">
+          <label>領収書</label>
+          <div class="upload-area" onclick="document.getElementById('receipt-input').click()">
+            📎 タップしてファイルを選択<br>
+            <span style="font-size:12px">JPG・PNG・PDF対応</span>
+          </div>
+          <input type="file" id="receipt-input" accept="image/jpeg,image/png,application/pdf" multiple style="display:none" onchange="handleFileSelect(event)">
+          <div id="file-list"></div>
+          <button class="btn ocr full" style="margin-top:8px" onclick="doOCR()">📷 OCRで自動読み取り（画像から金額・日付を入力）</button>
+          <div id="ocr-result"></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:.5rem;flex-wrap:wrap">
+          <button class="btn sm" onclick="saveTpl()">テンプレートに保存</button>
+          <div style="flex:1"></div>
+          <button class="btn sm" onclick="clearForm()">クリア</button>
+          <button class="btn primary sm" onclick="submitForm()">申請する</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 申請一覧 -->
+    <div id="page-list" class="page">
+      <div class="pt" style="display:none">申請一覧</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:.5rem">
+        <div style="flex:1;overflow-x:auto">
+          <div class="tab-bar" style="margin:0;border:none">
+            <div class="tab active" onclick="filterTab(this,'all')">すべて</div>
+            <div class="tab" onclick="filterTab(this,'pending')">承認待ち</div>
+            <div class="tab" onclick="filterTab(this,'approved')">承認済み</div>
+            <div class="tab" onclick="filterTab(this,'rejected')">差し戻し</div>
+          </div>
+        </div>
+        <button class="btn sm" onclick="exportCSV()" style="flex-shrink:0">CSV</button>
+      </div>
+      <!-- PC：テーブル -->
+      <div class="pc-table-wrap card" style="padding:0;overflow:hidden">
+        <table class="table"><thead><tr id="exp-thead"></tr></thead><tbody id="exp-tbody"></tbody></table>
+      </div>
+      <!-- スマホ：カードリスト -->
+      <div class="mobile-list-wrap" id="exp-mobile-list"></div>
+      <!-- コメントパネル -->
+      <div id="comment-panel" style="display:none" class="card">
+        <div class="section-lbl" id="cp-title">コメント</div>
+        <div id="cp-thread"></div>
+        <div id="cp-actions"></div>
+      </div>
+    </div>
+
+    <!-- レポート -->
+    <div id="page-report" class="page">
+      <div class="pt" style="display:none">レポート</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:.875rem;flex-wrap:wrap">
+        <input type="month" id="rpt-month" style="width:150px" onchange="renderReport()">
+        <button class="btn sm" onclick="exportCSV()">CSV出力</button>
+      </div>
+      <div class="metrics" id="rpt-metrics" style="grid-template-columns:repeat(3,1fr)"></div>
+      <div class="report-charts" style="display:grid;grid-template-columns:1fr 1fr;gap:.875rem">
+        <div class="card"><div class="section-lbl">カテゴリ別</div><div id="cat-chart"></div></div>
+        <div class="card"><div class="section-lbl">メンバー別</div><div id="mem-chart"></div></div>
+      </div>
+    </div>
+
+    <!-- 通知 -->
+    <div id="page-notif" class="page">
+      <div class="pt" style="display:none">通知</div>
+      <div id="notif-list"></div>
+    </div>
+
+    <!-- テンプレート -->
+    <div id="page-tpl" class="page">
+      <div class="pt" style="display:none">テンプレート</div>
+      <div class="card"><div class="section-lbl">保存済みテンプレート</div><div id="tpl-list"></div></div>
+    </div>
+
+    <!-- ユーザー管理 -->
+    <div id="page-admin" class="page">
+      <div class="pt" style="display:none">ユーザー管理</div>
+      <div id="user-list"></div>
+      <div class="card">
+        <div class="section-lbl">新規ユーザー追加</div>
+        <div class="two-col">
+          <div class="fg" style="margin-bottom:0"><label>名前</label><input type="text" id="nu-name"></div>
+          <div class="fg" style="margin-bottom:0"><label>メール</label><input type="email" id="nu-email"></div>
+        </div>
+        <div style="height:10px"></div>
+        <div class="two-col">
+          <div class="fg" style="margin-bottom:0"><label>パスワード</label><input type="password" id="nu-pass"></div>
+          <div class="fg" style="margin-bottom:0"><label>役割</label><select id="nu-role"><option value="member">一般</option><option value="admin">管理者</option></select></div>
+        </div>
+        <div class="flex-end"><button class="btn primary" onclick="addUser()">追加する</button></div>
+      </div>
+    </div>
+
+    <!-- 月次締め -->
+    <div id="page-close" class="page">
+      <div class="pt" style="display:none">月次締め</div>
+      <div class="card">
+        <div class="section-lbl">締め処理</div>
+        <div class="fg"><label>対象月</label><input type="month" id="close-month" style="max-width:180px"></div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:.875rem;line-height:1.6">締め処理を実行すると、対象月の申請データが確定され編集・追加が不可になります。CSVを先に出力することをお勧めします。</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn sm" onclick="exportCloseCSV()">確定CSVを出力</button>
+          <button class="btn warn sm" onclick="doClose()">締め処理を実行</button>
+        </div>
+      </div>
+      <div class="card"><div class="section-lbl">締め済み月</div><div id="closed-list"></div></div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /main-app -->
+
+<div id="modal-wrap" style="display:none"></div>
+<div class="toast-area" id="toast-area"></div>
+
+<script>
+// ================================================================
+// 設定
+// ================================================================
+const BACKEND_URL_KEY = 'expense_backend_url';
+let BACKEND_URL = localStorage.getItem(BACKEND_URL_KEY) || '';
+const today = new Date().toISOString().split('T')[0];
+const thisMonth = today.slice(0,7);
+let cu=null, state={users:[],expenses:[],templates:[],comments:[],receipts:[],closedMonths:[]};
+let curFilter='all', selExp=null, pendingR=[];
+
+// ================================================================
+// 起動
+// ================================================================
+window.addEventListener('load', async () => {
+  if (!BACKEND_URL) { hide('loading'); show('login-screen'); return; }
+  document.getElementById('setup-section').style.display='none';
+  setMsg('データを読み込み中...');
+  try { await refreshData(); hide('loading'); show('login-screen'); }
+  catch(e) { setMsg('接続に失敗しました'); setTimeout(()=>{hide('loading');show('login-screen');},2000); }
+});
+
+async function saveBackendUrl() {
+  const url=document.getElementById('backend-url-input').value.trim();
+  if(!url){showToast('URLを入力してください');return;}
+  showLoading('初期化中...');
+  try {
+    BACKEND_URL=url; localStorage.setItem(BACKEND_URL_KEY,url);
+    await api('init',{}); await refreshData();
+    document.getElementById('setup-section').style.display='none';
+    showToast('接続・初期化が完了しました');
+  } catch(e){showToast('接続に失敗しました。URLを確認してください。');}
+  hide('loading');
+}
+
+// ================================================================
+// API
+// ================================================================
+async function api(action,data={}) {
+  const res=await fetch(BACKEND_URL,{method:'POST',body:JSON.stringify({action,data})});
+  const json=await res.json();
+  if(!json.ok) throw new Error(json.error||'APIエラー');
+  return json;
+}
+
+async function refreshData() {
+  const r=await api('getAll');
+  state.users=r.users||[]; state.expenses=r.expenses||[];
+  state.templates=r.templates||[]; state.comments=r.comments||[];
+  state.receipts=r.receipts||[]; state.closedMonths=r.closedMonths||[];
+  state.expenses.forEach(e=>{e.amount=parseInt(e.amount)||0; e.comments=state.comments.filter(c=>c.expenseId===e.id);});
+  state.templates.forEach(t=>t.amount=parseInt(t.amount)||0);
+}
+
+// ================================================================
+// 認証
+// ================================================================
+async function doLogin() {
+  const email=document.getElementById('l-email').value.trim();
+  const pass=document.getElementById('l-pass').value;
+  const btn=document.getElementById('login-btn');
+  btn.disabled=true; btn.textContent='確認中...';
+  document.getElementById('l-err').textContent='';
+  try {
+    const r=await api('login',{email,pass}); cu=r.user;
+    hide('login-screen'); show('main-app');
+    const init=cu.name.replace(/\s/g,'').slice(0,2);
+    document.getElementById('nav-av').textContent=init;
+    document.getElementById('nav-name').textContent=cu.name;
+    document.getElementById('nav-role').textContent=cu.role==='admin'?'管理者':'一般';
+    document.getElementById('mh-av').textContent=init;
+    if(cu.role==='admin'){
+      show('nav-admin'); show('nav-close');
+      document.getElementById('mm-admin').style.display='flex';
+      document.getElementById('mm-close').style.display='flex';
+    }
+    document.getElementById('req-date').value=today;
+    document.getElementById('pay-date').value=today;
+    document.getElementById('rpt-month').value=thisMonth;
+    document.getElementById('close-month').value=thisMonth;
+    updateBadges(); renderDashboard(); renderTplQuick();
+  } catch(e){ document.getElementById('l-err').textContent=e.message; }
+  btn.disabled=false; btn.textContent='サインイン';
+}
+
+function doLogout() {
+  cu=null; hide('main-app'); show('login-screen');
+  ['nav-admin','nav-close'].forEach(id=>document.getElementById(id).style.display='none');
+  ['mm-admin','mm-close'].forEach(id=>document.getElementById(id).style.display='none');
+  document.getElementById('l-email').value=''; document.getElementById('l-pass').value='';
+}
+
+// ================================================================
+// ナビゲーション
+// ================================================================
+function go(page, el, title) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.bn-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  if(el) el.classList.add('active');
+  const bn=document.getElementById('bn-'+page);
+  if(bn) bn.classList.add('active');
+  if(title) document.getElementById('mh-title').textContent=title;
+  document.getElementById('comment-panel').style.display='none'; selExp=null;
+  if(page==='list'){renderTable();}
+  if(page==='report'){renderReport();}
+  if(page==='notif'){renderNotifs();}
+  if(page==='tpl'){renderTpls();}
+  if(page==='admin'){renderUsers();}
+  if(page==='close'){renderClosedList();}
+  if(page==='dashboard'){renderDashboard();}
+  if(page==='apply'){renderTplQuick();checkApplyLock();}
+}
+
+// ================================================================
+// もっと見るメニュー
+// ================================================================
+function toggleMoreMenu() {
+  document.getElementById('more-menu').classList.toggle('open');
+  document.getElementById('mm-overlay').classList.toggle('open');
+}
+function closeMoreMenu() {
+  document.getElementById('more-menu').classList.remove('open');
+  document.getElementById('mm-overlay').classList.remove('open');
+}
+
+// ================================================================
+// バッジ・通知
+// ================================================================
+function updateBadges() {
+  const pending=state.expenses.filter(e=>cu.role==='admin'?e.status==='pending':e.userId===cu.id&&e.status==='pending').length;
+  ['pending-dot','bn-pending-dot'].forEach(id=>{const el=document.getElementById(id);el.style.display=pending>0?'flex':'none';el.textContent=pending;});
+  const nc=getNotifs().filter(n=>!n.read).length;
+  ['notif-dot','bn-notif-dot'].forEach(id=>{const el=document.getElementById(id);el.style.display=nc>0?'flex':'none';el.textContent=nc;});
+  const mmc=document.getElementById('mm-notif-cnt');
+  mmc.textContent=nc>0?nc+'件の通知':'';
+}
+
+function getNotifs() {
+  const notifs=[]; const now=new Date();
+  if(cu.role==='admin'){
+    state.expenses.filter(e=>e.status==='pending'&&daysDiff(e.date,today)>=3).forEach(e=>{
+      const u=state.users.find(x=>x.id===e.userId);
+      notifs.push({type:'warn',text:`${u?.name||'?'}の「${e.memo}」が${daysDiff(e.date,today)}日間未承認です`,read:false});
+    });
+    const lastDay=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();
+    if(now.getDate()>=lastDay-3){
+      const noApply=state.users.filter(u=>u.role==='member'&&!state.expenses.find(e=>e.userId===u.id&&e.date.startsWith(thisMonth)));
+      if(noApply.length>0)notifs.push({type:'info',text:`${noApply.map(u=>u.name.split(' ')[0]).join('・')} は今月未申請です`,read:false});
+    }
+  } else {
+    state.expenses.filter(e=>e.userId===cu.id&&e.status==='rejected').forEach(e=>{
+      notifs.push({type:'danger',text:`「${e.memo}」が差し戻されました`,read:false});
+    });
+    state.expenses.filter(e=>e.userId===cu.id&&e.status==='approved'&&daysDiff(e.date,today)<=3).forEach(e=>{
+      notifs.push({type:'success',text:`「${e.memo}」が承認されました`,read:true});
+    });
+  }
+  return notifs;
+}
+
+function daysDiff(d1,d2){return Math.floor((new Date(d2)-new Date(d1))/86400000);}
+
+function renderNotifs() {
+  const notifs=getNotifs();
+  document.getElementById('notif-list').innerHTML=notifs.length===0
+    ?'<div class="card" style="font-size:13px;color:var(--text2)">通知はありません</div>'
+    :notifs.map(n=>`<div class="notif ${n.type}"><div class="notif-dot"></div><div>${n.text}</div></div>`).join('');
+}
+
+// ================================================================
+// ダッシュボード
+// ================================================================
+function renderDashboard() {
+  const myExp=state.expenses.filter(e=>cu.role==='admin'?true:e.userId===cu.id).filter(e=>e.date.startsWith(thisMonth));
+  const total=myExp.reduce((s,e)=>s+e.amount,0);
+  const approved=myExp.filter(e=>e.status==='approved').reduce((s,e)=>s+e.amount,0);
+  const pending=myExp.filter(e=>e.status==='pending').length;
+  const rejected=myExp.filter(e=>e.status==='rejected').length;
+  document.getElementById('db-metrics').innerHTML=`
+    <div class="metric"><div class="ml">${cu.role==='admin'?'全体合計':'今月合計'}</div><div class="mv" style="color:var(--purple)">¥${total.toLocaleString()}</div></div>
+    <div class="metric"><div class="ml">承認済み</div><div class="mv" style="color:var(--teal)">¥${approved.toLocaleString()}</div></div>
+    <div class="metric"><div class="ml">承認待ち</div><div class="mv" style="color:var(--amber)">${pending}件</div></div>
+    <div class="metric"><div class="ml">差し戻し</div><div class="mv" style="color:var(--red)">${rejected}件</div></div>`;
+  document.getElementById('db-notifs').innerHTML=getNotifs().slice(0,2).map(n=>`<div class="notif ${n.type}" style="margin-bottom:6px"><div class="notif-dot"></div><div>${n.text}</div></div>`).join('');
+  document.getElementById('db-list').innerHTML=myExp.slice(0,8).map(e=>{
+    const u=state.users.find(x=>x.id===e.userId);
+    return`<div class="exp-card" onclick="go('list');setTimeout(()=>selectExp('${e.id}'),100)">
+      <div class="exp-card-top">
+        <div class="exp-card-memo">${e.memo}</div>
+        <div class="exp-card-amount">¥${e.amount.toLocaleString()}</div>
+      </div>
+      <div class="exp-card-bottom">
+        <span>${e.date}</span>${cu.role==='admin'?`<span>${u?.name.split(' ')[0]||'?'}</span>`:''}
+        <span>${e.category}</span>
+        <span class="badge ${e.status}">${statusLabel(e.status)}</span>
+      </div>
+    </div>`;
+  }).join('')||'<div style="font-size:13px;color:var(--text2);text-align:center;padding:1.25rem">今月の申請はありません</div>';
+}
+
+// ================================================================
+// 申請一覧
+// ================================================================
+function statusLabel(s){return s==='pending'?'承認待ち':s==='approved'?'承認済み':s==='rejected'?'差し戻し':'確定';}
+
+function filterTab(el,f) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active'); curFilter=f; renderTable();
+}
+
+function renderTable() {
+  const isAdmin=cu.role==='admin';
+  let list=isAdmin?state.expenses:state.expenses.filter(e=>e.userId===cu.id);
+  if(curFilter!=='all') list=list.filter(e=>e.status===curFilter);
+
+  // PC テーブル
+  document.getElementById('exp-thead').innerHTML=`<th style="width:88px">申請日</th>${isAdmin?'<th style="width:60px">担当</th>':''}<th style="width:68px">カテゴリ</th><th>用途</th><th style="width:84px;text-align:right">金額</th><th style="width:76px">状態</th><th style="width:110px">操作</th>`;
+  document.getElementById('exp-tbody').innerHTML=list.map(e=>{
+    const locked=isMonthLocked(e.date.slice(0,7));
+    const u=state.users.find(x=>x.id===e.userId);
+    let actions='';
+    if(isAdmin&&e.status==='pending'&&!locked) actions=`<button class="btn sm" style="margin-right:3px" onclick="approveExp('${e.id}')">承認</button><button class="btn sm danger" onclick="openReject('${e.id}')">差し戻し</button>`;
+    else if(!isAdmin&&e.status==='rejected'&&!locked) actions=`<button class="btn sm" onclick="openResubmit('${e.id}')">再申請</button>`;
+    return`<tr style="cursor:pointer" onclick="selectExp('${e.id}')">
+      <td>${e.date}</td>${isAdmin?`<td>${u?.name.split(' ')[0]||'?'}</td>`:''}
+      <td>${e.category}</td><td style="overflow:hidden;text-overflow:ellipsis">${e.memo}</td>
+      <td style="text-align:right;font-weight:600">¥${e.amount.toLocaleString()}</td>
+      <td><span class="badge ${e.status}">${statusLabel(e.status)}</span></td>
+      <td onclick="event.stopPropagation()">${actions}${locked?'<span class="badge locked">確定済み</span>':''}</td>
+    </tr>`;
+  }).join('');
+
+  // スマホ カードリスト
+  document.getElementById('exp-mobile-list').innerHTML=list.map(e=>{
+    const locked=isMonthLocked(e.date.slice(0,7));
+    const u=state.users.find(x=>x.id===e.userId);
+    let actions='';
+    if(isAdmin&&e.status==='pending'&&!locked) actions=`<button class="btn sm" onclick="event.stopPropagation();approveExp('${e.id}')">承認</button><button class="btn sm danger" onclick="event.stopPropagation();openReject('${e.id}')">差し戻し</button>`;
+    else if(!isAdmin&&e.status==='rejected'&&!locked) actions=`<button class="btn sm" onclick="event.stopPropagation();openResubmit('${e.id}')">再申請</button>`;
+    return`<div class="exp-card" onclick="selectExp('${e.id}')">
+      <div class="exp-card-top">
+        <div class="exp-card-memo">${e.memo}</div>
+        <div class="exp-card-amount">¥${e.amount.toLocaleString()}</div>
+      </div>
+      <div class="exp-card-bottom">
+        <span>${e.date}</span>${isAdmin?`<span>${u?.name.split(' ')[0]||'?'}</span>`:''}
+        <span>${e.category}</span>
+        <span class="badge ${e.status}">${statusLabel(e.status)}</span>
+        ${locked?'<span class="badge locked">確定済み</span>':''}
+      </div>
+      ${actions?`<div class="exp-card-actions">${actions}</div>`:''}
+    </div>`;
+  }).join('')||'<div style="text-align:center;padding:2rem;color:var(--text2);font-size:13px">該当する申請はありません</div>';
+}
+
+function selectExp(id) {
+  selExp=state.expenses.find(e=>e.id===id); if(!selExp)return;
+  const panel=document.getElementById('comment-panel'); panel.style.display='block';
+  document.getElementById('cp-title').textContent=`コメント：${selExp.memo}`;
+  const expReceipts=(state.receipts||[]).filter(r=>r.expenseId===id);
+  const receiptHtml=expReceipts.length>0?`<div style="margin-bottom:.875rem"><div class="section-lbl">添付領収書</div>${expReceipts.map(r=>`
+    <div class="file-item"><div class="fi-icon">${r.fileName.split('.').pop().toUpperCase().slice(0,3)}</div>
+    <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.fileName}</div>
+    <a href="${r.fileUrl}" target="_blank" class="btn sm" style="text-decoration:none;flex-shrink:0">開く</a></div>`).join('')}</div>`:'';
+  const thread=(selExp.comments||[]).map(c=>{
+    const isAdm=c.from==='admin'; const u=state.users.find(x=>x.id===c.from);
+    return`<div style="display:flex;flex-direction:column;align-items:${isAdm?'flex-end':'flex-start'}">
+      <div class="comment-meta">${isAdm?'管理者':u?.name||c.from} · ${c.ts}</div>
+      <div class="comment-msg ${isAdm?'admin-msg':'user-msg'}">${c.text}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('cp-thread').innerHTML=receiptHtml+`<div class="comment-thread">${thread||'<div style="font-size:13px;color:var(--text2)">コメントなし</div>'}</div>`;
+  document.getElementById('cp-actions').innerHTML=`<div style="display:flex;gap:8px;margin-top:.875rem"><input type="text" id="cp-input" placeholder="コメントを入力..." style="flex:1"><button class="btn sm primary" onclick="addComment()">送信</button></div>`;
+  panel.scrollIntoView({behavior:'smooth'});
+}
+
+async function addComment() {
+  if(!selExp)return; const txt=document.getElementById('cp-input').value.trim(); if(!txt)return;
+  showLoading('送信中...');
+  try {
+    await api('addComment',{expenseId:selExp.id,from:cu.role==='admin'?'admin':cu.id,text:txt,ts:today});
+    await refreshData(); selectExp(selExp.id); showToast('コメントを送信しました');
+  } catch(e){showToast('送信に失敗しました');}
+  hide('loading');
+}
+
+async function approveExp(id) {
+  showLoading('処理中...');
+  try {
+    await api('updateExpense',{id,status:'approved'});
+    await api('addComment',{expenseId:id,from:'admin',text:'承認しました',ts:today});
+    await refreshData(); renderTable(); updateBadges(); showToast('承認しました');
+    document.getElementById('comment-panel').style.display='none';
+  } catch(e){showToast('処理に失敗しました');}
+  hide('loading');
+}
+
+function openReject(id) {
+  const e=state.expenses.find(x=>x.id===id);
+  document.getElementById('modal-wrap').innerHTML=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">差し戻し理由を入力</div>
+    <div class="fg"><label>申請</label><div style="font-size:14px;padding:6px 0;font-weight:500">${e.memo}　¥${e.amount.toLocaleString()}</div></div>
+    <div class="fg"><label>差し戻し理由</label><textarea id="rej-reason" placeholder="例：領収書が不鮮明です。再提出をお願いします。"></textarea></div>
+    <div class="flex-end"><button class="btn" onclick="closeModal()">キャンセル</button><button class="btn danger" onclick="doReject('${id}')">差し戻す</button></div>
+  </div></div>`;
+  document.getElementById('modal-wrap').style.display='block';
+}
+
+async function doReject(id) {
+  const reason=document.getElementById('rej-reason').value.trim();
+  if(!reason){showToast('理由を入力してください');return;}
+  closeModal(); showLoading('処理中...');
+  try {
+    await api('updateExpense',{id,status:'rejected'});
+    await api('addComment',{expenseId:id,from:'admin',text:reason,ts:today});
+    await refreshData(); renderTable(); updateBadges(); showToast('差し戻しました');
+  } catch(e){showToast('処理に失敗しました');}
+  hide('loading');
+}
+
+function openResubmit(id) {
+  const e=state.expenses.find(x=>x.id===id);
+  document.getElementById('modal-wrap').innerHTML=`<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">再申請</div>
+    <div class="fg"><label>金額</label><input type="number" id="rs-amt" value="${e.amount}" inputmode="numeric"></div>
+    <div class="fg"><label>用途・摘要</label><textarea id="rs-memo">${e.memo}</textarea></div>
+    <div class="fg"><label>修正コメント</label><textarea id="rs-comment" placeholder="修正内容を記入してください"></textarea></div>
+    <div class="flex-end"><button class="btn" onclick="closeModal()">キャンセル</button><button class="btn primary" onclick="doResubmit('${id}')">再申請する</button></div>
+  </div></div>`;
+  document.getElementById('modal-wrap').style.display='block';
+}
+
+async function doResubmit(id) {
+  const amt=parseInt(document.getElementById('rs-amt').value);
+  const memo=document.getElementById('rs-memo').value.trim();
+  const comment=document.getElementById('rs-comment').value.trim();
+  closeModal(); showLoading('処理中...');
+  try {
+    await api('updateExpense',{id,status:'pending',amount:amt,memo});
+    if(comment) await api('addComment',{expenseId:id,from:cu.id,text:comment,ts:today});
+    await refreshData(); renderTable(); updateBadges(); showToast('再申請しました');
+  } catch(e){showToast('処理に失敗しました');}
+  hide('loading');
+}
+
+function closeModal(){document.getElementById('modal-wrap').style.display='none';document.getElementById('modal-wrap').innerHTML='';}
+
+// ================================================================
+// 申請フォーム
+// ================================================================
+function isMonthLocked(m){return state.closedMonths.includes(m);}
+
+function checkApplyLock() {
+  const el=document.getElementById('apply-locked-msg');
+  el.innerHTML=isMonthLocked(thisMonth)?`<div class="locked-banner">🔒 今月（${thisMonth}）は締め処理済みのため、新規申請できません</div>`:'';
+}
+
+function handleFileSelect(event) {
+  const files=Array.from(event.target.files); if(!files.length)return;
+  files.forEach(file=>{if(!pendingR.find(r=>r.name===file.name)) pendingR.push({name:file.name,file,ext:file.name.split('.').pop().toUpperCase().slice(0,3),size:formatSize(file.size)});});
+  renderFileList(); showToast('領収書を選択しました');
+}
+
+function formatSize(bytes) {
+  if(bytes<1024)return bytes+' B';
+  if(bytes<1024*1024)return Math.round(bytes/1024)+' KB';
+  return(bytes/1024/1024).toFixed(1)+' MB';
+}
+
+function renderFileList() {
+  document.getElementById('file-list').innerHTML=pendingR.map((r,i)=>`
+    <div class="file-item">
+      <div class="fi-icon">${r.ext}</div>
+      <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.name}</div>
+      <div style="color:var(--text2);flex-shrink:0;font-size:12px">${r.size}</div>
+      <button class="btn sm danger" style="flex-shrink:0" onclick="removeFile(${i})">×</button>
+    </div>`).join('');
+}
+
+function removeFile(i){pendingR.splice(i,1);renderFileList();}
+
+function fileToBase64(file) {
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>resolve(e.target.result.split(',')[1]);
+    reader.onerror=reject; reader.readAsDataURL(file);
+  });
+}
+
+async function uploadPendingReceipts(expenseId) {
+  for(const r of pendingR){
+    if(!r.file)continue;
+    try {
+      const base64=await fileToBase64(r.file);
+      await api('uploadReceipt',{expenseId,userId:cu.id,fileName:r.name,mimeType:r.file.type,base64});
+    } catch(e){console.error('upload error',e);}
+  }
+}
+
+async function doOCR() {
+  const imageFile=pendingR.find(r=>r.file&&r.file.type.startsWith('image/'));
+  if(!imageFile){showToast('JPGまたはPNGの画像を添付してください');return;}
+  const btn=document.querySelector('.btn.ocr'); btn.textContent='読み取り中...'; btn.disabled=true;
+  document.getElementById('ocr-result').innerHTML='<div style="font-size:13px;color:var(--text2);margin-top:8px">領収書を解析中...</div>';
+  try {
+    const base64=await fileToBase64(imageFile.file);
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:imageFile.file.type,data:base64}},
+        {type:'text',text:'この領収書から経費情報を読み取り、以下のJSON形式のみで返してください（前後の説明文不要）:\n{"date":"YYYY-MM-DD","amount":数値,"category":"交通費|飲食費|宿泊費|消耗品|通信費|その他","memo":"店名や用途"}\n日付が不明な場合は今日の日付、金額が不明な場合は0を入れてください。'}
+      ]}]})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message);
+    const parsed=JSON.parse(data.content.map(c=>c.text||'').join('').replace(/```json|```/g,'').trim());
+    if(parsed.date)document.getElementById('pay-date').value=parsed.date;
+    if(parsed.amount)document.getElementById('amount').value=parsed.amount;
+    if(parsed.category)document.getElementById('category').value=parsed.category;
+    if(parsed.memo)document.getElementById('memo').value=parsed.memo;
+    document.getElementById('ocr-result').innerHTML=`<div style="font-size:13px;color:var(--teal);margin-top:8px;padding:.625rem .875rem;background:var(--teal-l);border-radius:var(--r)">✅ 読み取り完了：${parsed.memo}　¥${(parsed.amount||0).toLocaleString()}</div>`;
+    showToast('OCR読み取りが完了しました');
+  } catch(e){
+    document.getElementById('ocr-result').innerHTML=`<div style="font-size:13px;color:var(--red);margin-top:8px;padding:.625rem .875rem;background:var(--red-l);border-radius:var(--r)">❌ 読み取りに失敗しました。手動で入力してください。</div>`;
+  }
+  btn.textContent='📷 OCRで自動読み取り（画像から金額・日付を入力）'; btn.disabled=false;
+}
+
+async function submitForm() {
+  if(isMonthLocked(document.getElementById('req-date').value.slice(0,7))){showToast('この月は締め処理済みです');return;}
+  const cat=document.getElementById('category').value;
+  const amt=parseInt(document.getElementById('amount').value)||0;
+  const memo=document.getElementById('memo').value.trim();
+  if(!cat||!amt||!memo){showToast('必須項目を入力してください');return;}
+  showLoading('申請を送信中...');
+  try {
+    const r=await api('addExpense',{userId:cu.id,date:document.getElementById('req-date').value,category:cat,memo,amount:amt});
+    if(pendingR.length>0){showLoading('領収書をアップロード中...');await uploadPendingReceipts(r.id);}
+    await refreshData(); pendingR=[]; clearForm(); updateBadges(); showToast('申請を送信しました');
+  } catch(e){showToast('送信に失敗しました');}
+  hide('loading');
+}
+
+function clearForm() {
+  ['category','amount','memo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('file-list').innerHTML='';
+  document.getElementById('ocr-result').innerHTML='';
+  document.getElementById('receipt-input').value='';
+  pendingR=[];
+}
+
+// ================================================================
+// テンプレート
+// ================================================================
+function renderTpls() {
+  const myT=state.templates.filter(t=>t.userId===cu.id||cu.role==='admin');
+  document.getElementById('tpl-list').innerHTML=myT.length===0?'<div style="font-size:13px;color:var(--text2)">テンプレートがありません</div>':
+    myT.map(t=>`<div class="tpl-card" onclick="applyTpl('${t.id}')"><div class="tpl-icon">${t.category.slice(0,2)}</div><div style="flex:1"><div style="font-weight:600">${t.name}</div><div style="font-size:12px;color:var(--text2)">${t.category} · ¥${t.amount.toLocaleString()}</div></div><button class="btn sm danger" onclick="event.stopPropagation();delTpl('${t.id}')">削除</button></div>`).join('');
+}
+
+function renderTplQuick() {
+  const myT=state.templates.filter(t=>t.userId===cu.id).slice(0,4);
+  document.getElementById('tpl-quick').innerHTML=myT.length===0?'<div style="font-size:13px;color:var(--text2)">テンプレートがありません。申請後「テンプレートに保存」で登録できます。</div>':
+    myT.map(t=>`<div class="tpl-card" onclick="applyTpl('${t.id}')"><div class="tpl-icon">${t.category.slice(0,2)}</div><div style="flex:1"><div style="font-weight:600;font-size:13px">${t.name}</div><div style="font-size:12px;color:var(--text2)">${t.category} · ¥${t.amount.toLocaleString()}</div></div></div>`).join('');
+}
+
+function applyTpl(id) {
+  const t=state.templates.find(x=>x.id===id); if(!t)return;
+  document.getElementById('category').value=t.category;
+  document.getElementById('amount').value=t.amount;
+  document.getElementById('memo').value=t.memo;
+  go('apply',document.getElementById('nav-apply'),'申請・入力');
+  showToast('テンプレートを適用しました');
+}
+
+async function saveTpl() {
+  const cat=document.getElementById('category').value;
+  const amt=parseInt(document.getElementById('amount').value)||0;
+  const memo=document.getElementById('memo').value.trim();
+  if(!cat||!amt||!memo){showToast('カテゴリ・金額・用途を入力してください');return;}
+  const name=prompt('テンプレート名を入力してください'); if(!name)return;
+  showLoading('保存中...');
+  try {
+    await api('addTemplate',{userId:cu.id,name,category:cat,amount:amt,memo});
+    await refreshData(); renderTplQuick(); showToast('テンプレートを保存しました');
+  } catch(e){showToast('保存に失敗しました');}
+  hide('loading');
+}
+
+async function delTpl(id) {
+  showLoading('削除中...');
+  try { await api('delTemplate',{id}); await refreshData(); renderTpls(); showToast('削除しました'); }
+  catch(e){showToast('削除に失敗しました');}
+  hide('loading');
+}
+
+// ================================================================
+// レポート
+// ================================================================
+function renderReport() {
+  const m=document.getElementById('rpt-month').value||thisMonth;
+  const filtered=state.expenses.filter(e=>e.date.startsWith(m));
+  const total=filtered.reduce((s,e)=>s+e.amount,0);
+  const appr=filtered.filter(e=>e.status==='approved').reduce((s,e)=>s+e.amount,0);
+  const pend=filtered.filter(e=>e.status==='pending').reduce((s,e)=>s+e.amount,0);
+  document.getElementById('rpt-metrics').innerHTML=`
+    <div class="metric"><div class="ml">合計</div><div class="mv" style="color:var(--purple)">¥${total.toLocaleString()}</div></div>
+    <div class="metric"><div class="ml">承認済み</div><div class="mv" style="color:var(--teal)">¥${appr.toLocaleString()}</div></div>
+    <div class="metric"><div class="ml">承認待ち</div><div class="mv" style="color:var(--amber)">¥${pend.toLocaleString()}</div></div>`;
+  const cats={};filtered.forEach(e=>{cats[e.category]=(cats[e.category]||0)+e.amount;});
+  const cmax=Math.max(1,...Object.values(cats));
+  const cc={'交通費':'#534AB7','飲食費':'#0F6E56','宿泊費':'#BA7517','消耗品':'#993C1D','通信費':'#185FA5','その他':'#5F5E5A'};
+  document.getElementById('cat-chart').innerHTML=Object.keys(cats).length===0?'<div style="font-size:13px;color:var(--text2)">データなし</div>':
+    Object.entries(cats).map(([k,v])=>`<div class="chart-row"><div style="width:56px;color:var(--text2);flex-shrink:0;font-size:12px">${k}</div><div class="cb-bg"><div class="cb" style="width:${Math.round(v/cmax*100)}%;background:${cc[k]||'#534AB7'}"></div></div><div style="width:68px;text-align:right;font-weight:600;font-size:12px">¥${v.toLocaleString()}</div></div>`).join('');
+  const mems={};filtered.forEach(e=>{mems[e.userId]=(mems[e.userId]||0)+e.amount;});
+  const mmax=Math.max(1,...Object.values(mems));
+  document.getElementById('mem-chart').innerHTML=Object.keys(mems).length===0?'<div style="font-size:13px;color:var(--text2)">データなし</div>':
+    Object.entries(mems).map(([uid,v])=>{const u=state.users.find(x=>x.id===uid);return`<div class="chart-row"><div style="width:48px;color:var(--text2);flex-shrink:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(u?.name||'?').split(' ')[0]}</div><div class="cb-bg"><div class="cb" style="width:${Math.round(v/mmax*100)}%;background:#534AB7"></div></div><div style="width:68px;text-align:right;font-weight:600;font-size:12px">¥${v.toLocaleString()}</div></div>`;}).join('');
+}
+
+// ================================================================
+// ユーザー管理
+// ================================================================
+function renderUsers() {
+  document.getElementById('user-list').innerHTML=state.users.map(u=>`
+    <div class="card" style="display:flex;align-items:center;gap:12px;padding:.875rem 1rem">
+      <div class="av" style="width:36px;height:36px;font-size:13px">${u.name.replace(/\s/g,'').slice(0,2)}</div>
+      <div style="flex:1;overflow:hidden">
+        <div style="font-weight:600">${u.name}</div>
+        <div style="font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.email}</div>
+      </div>
+      <span class="badge ${u.role}">${u.role==='admin'?'管理者':'一般'}</span>
+      ${u.id!==cu.id?`<button class="btn sm danger" onclick="removeUser('${u.id}')">削除</button>`:'<span style="font-size:12px;color:var(--text2)">自分</span>'}
+    </div>`).join('');
+}
+
+async function addUser() {
+  const name=document.getElementById('nu-name').value.trim();
+  const email=document.getElementById('nu-email').value.trim();
+  const pass=document.getElementById('nu-pass').value;
+  const role=document.getElementById('nu-role').value;
+  if(!name||!email||!pass){showToast('全項目を入力してください');return;}
+  showLoading('追加中...');
+  try {
+    await api('addUser',{name,email,pass,role}); await refreshData(); renderUsers();
+    ['nu-name','nu-email','nu-pass'].forEach(id=>document.getElementById(id).value='');
+    showToast(name+'を追加しました');
+  } catch(e){showToast(e.message||'追加に失敗しました');}
+  hide('loading');
+}
+
+async function removeUser(id) {
+  if(!confirm('このユーザーを削除しますか？'))return;
+  showLoading('削除中...');
+  try { await api('delUser',{id}); await refreshData(); renderUsers(); showToast('削除しました'); }
+  catch(e){showToast('削除に失敗しました');}
+  hide('loading');
+}
+
+// ================================================================
+// 月次締め
+// ================================================================
+function renderClosedList() {
+  const el=document.getElementById('closed-list');
+  el.innerHTML=state.closedMonths.length===0?'<div style="font-size:13px;color:var(--text2)">締め済み月はありません</div>':
+    state.closedMonths.map(m=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px"><span class="badge locked">${m}</span><span style="color:var(--text2)">確定済み</span><button class="btn sm" style="margin-left:auto" onclick="exportMonthCSV('${m}')">CSV</button></div>`).join('');
+}
+
+async function doClose() {
+  const m=document.getElementById('close-month').value; if(!m){showToast('対象月を選択してください');return;}
+  showLoading('処理中...');
+  try { await api('closeMonth',{month:m}); await refreshData(); renderClosedList(); showToast(m+'の締め処理を実行しました'); }
+  catch(e){showToast(e.message||'処理に失敗しました');}
+  hide('loading');
+}
+
+// ================================================================
+// CSV出力
+// ================================================================
+function exportCSV(){
+  let list=cu.role==='admin'?state.expenses:state.expenses.filter(e=>e.userId===cu.id);
+  csvDownload(list,'expenses_'+today);
+}
+function exportCloseCSV(){exportMonthCSV(document.getElementById('close-month').value);}
+function exportMonthCSV(m){csvDownload(state.expenses.filter(e=>e.date.startsWith(m)),'close_'+m);showToast(m+' のCSVを出力しました');}
+function csvDownload(list,fname) {
+  const h='申請日,申請者,カテゴリ,用途,金額,ステータス';
+  const rows=list.map(e=>{const u=state.users.find(x=>x.id===e.userId);return[e.date,'"'+(u?.name||'')+'"',e.category,'"'+e.memo.replace(/"/g,'""')+'"',e.amount,statusLabel(e.status)].join(',');});
+  const csv='\uFEFF'+h+'\n'+rows.join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=fname+'.csv';
+  document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},500);
+  showToast('CSVを出力しました');
+}
+
+// ================================================================
+// UI ユーティリティ
+// ================================================================
+function show(id){const el=document.getElementById(id);if(id==='main-app')el.style.display='flex';else el.style.display='block';}
+function hide(id){document.getElementById(id).style.display='none';}
+function showLoading(msg='処理中...'){setMsg(msg);show('loading');}
+function setMsg(msg){document.getElementById('loading-msg').textContent=msg;}
+
+function showToast(msg) {
+  const area=document.getElementById('toast-area');
+  const t=document.createElement('div'); t.className='toast'; t.textContent=msg;
+  area.appendChild(t); requestAnimationFrame(()=>t.classList.add('show'));
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),350);},2500);
+}
+</script>
+</body>
+</html>
